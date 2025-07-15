@@ -48,7 +48,8 @@
 
 			// Mark form as changed if this isn't initialisation
 			if (!init) {
-				$('.cms-edit-form').addClass('changed');
+				// Support both Silverstripe 4 and 5 form change detection
+				$('.cms-edit-form, .ss-edit-form').addClass('changed');
 			}
 		}
 
@@ -56,7 +57,8 @@
 			zoomField.val(map.getZoom());
 			// Mark form as changed if this isn't initialisation
 			if (!init) {
-				$('.cms-edit-form').addClass('changed');
+				// Support both Silverstripe 4 and 5 form change detection
+				$('.cms-edit-form, .ss-edit-form').addClass('changed');
 			}
 		}
 
@@ -105,7 +107,7 @@
 		// Populate the fields to the current centre
 		google.maps.event.addListenerOnce(map, 'idle', function(){
 			updateField(map.getCenter(), true);
-			updateZoom(init);
+			updateZoom(true);
 		});
 
 		google.maps.event.addListener(marker, 'dragend', centreOnMarker);
@@ -143,8 +145,8 @@
 	}
 
 	// CMS stuff: set the init method to re-run if the page is saved or pjaxed
-	// there are no docs for the CMS implementation of entwine, so this is hacky
-	if(!!$.fn.entwine && $(document.body).hasClass('cms')) {
+	// Support both Silverstripe 4 and 5 CMS integration
+	if(!!$.fn.entwine && ($(document.body).hasClass('cms') || $(document.body).hasClass('ss-admin'))) {
 		(function setupCMS() {
 			var matchFunction = function() {
 				if(gmapsAPILoaded) {
@@ -152,6 +154,7 @@
 				}
 			};
 			$.entwine('googlemapfield', function($) {
+				// Silverstripe 4 selectors
 				$('.cms-tabset').entwine({
 					onmatch: matchFunction
 				});
@@ -164,8 +167,41 @@
 				$('.cms-edit-form').entwine({
 					onmatch: matchFunction
 				});
+				
+				// Silverstripe 5 selectors
+				$('.ss-tabset').entwine({
+					onmatch: matchFunction
+				});
+				$('.ss-tabset-nav-primary li').entwine({
+					onclick: matchFunction
+				});
+				$('.ss-edit-form').entwine({
+					onmatch: matchFunction
+				});
 			});
 		}());
 	}
+
+	// Also support modern event listeners for Silverstripe 5
+	$(document).ready(function() {
+		// Initial load
+		if(gmapsAPILoaded) {
+			init();
+		}
+		
+		// Listen for CMS navigation events
+		$(document).on('ss.tabset.changed', function() {
+			if(gmapsAPILoaded) {
+				setTimeout(init, 100);
+			}
+		});
+		
+		// Listen for form changes
+		$(document).on('ss.form.changed', function() {
+			if(gmapsAPILoaded) {
+				setTimeout(init, 100);
+			}
+		});
+	});
 
 }(jQuery));

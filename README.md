@@ -1,116 +1,172 @@
-silverstripe-googlemapfield
-==============
+# Silverstripe Google Map Field
 
-[![Scrutinizer Code Quality](https://scrutinizer-ci.com/g/BetterBrief/silverstripe-googlemapfield/badges/quality-score.png?b=master)](https://scrutinizer-ci.com/g/BetterBrief/silverstripe-googlemapfield/?branch=master)
+A Silverstripe form field that allows users to select locations using Google Maps API. Compatible with both Silverstripe 4 and 5.
 
-Lets you record a precise location using latitude/longitude/zoom fields to a DataObject.
+## Features
 
-Displays a map using the Google Maps API. The user may then choose where to place the marker; the landing coordinates are then saved.
+- Interactive Google Maps integration
+- Search functionality using Google Geocoding API
+- Saves latitude/longitude coordinates to DataObject fields
+- Configurable map options and field names
+- Compatible with both Silverstripe 4 and 5
 
-You can also search for locations using the search box, which uses the Google Maps Geocoding API.
+## Requirements
 
-Supports SilverStripe 4
+- PHP 7.4 or higher
+- Silverstripe Framework 4.0 or higher (including Silverstripe 5)
+- Google Maps API key
+
+## Installation
+
+1. Install via Composer:
+```bash
+composer require betterbrief/silverstripe-googlemapfield
+```
+
+2. Add your Google Maps API key to your configuration:
+
+```yaml
+# app/_config/googlemapfield.yml
+BetterBrief\GoogleMapField:
+  default_options:
+    api_key: 'your-google-maps-api-key-here'
+```
 
 ## Usage
 
-### Minimal configuration
-
-Given your DataObject uses the field names `Latitude` and `Longitude` for storing the latitude and longitude
-respectively then the following is a minimal setup to have the map show in the CMS:
+### Basic Usage
 
 ```php
-use SilverStripe\ORM\DataObject;
 use BetterBrief\GoogleMapField;
 
-class Store extends DataObject
+class MyDataObject extends DataObject
 {
     private static $db = [
-        'Title' => 'Varchar(255)',
-        'Latitude' => 'Varchar',
-        'Longitude' => 'Varchar',
+        'Latitude' => 'Decimal(10,8)',
+        'Longitude' => 'Decimal(11,8)',
+        'Zoom' => 'Int',
+        'Bounds' => 'Text'
     ];
-    
-    public function getCMSFields() {
-        $fields = parent::getCMSFiels();
+
+    public function getCMSFields()
+    {
+        $fields = parent::getCMSFields();
         
-        // add the map field
-        $fields->addFieldToTab('Root.Main', new GoogleMapField(
-            $this,
-            'Location'
-        ));
-        
-        // remove the lat / lng fields from the CMS
-        $fields->removeFieldsFromTab('Root.Main', ['Latitude', 'Longitude']);
+        $fields->addFieldToTab('Root.Main', 
+            GoogleMapField::create(
+                $this,
+                'Location',
+                [
+                    'api_key' => 'your-api-key',
+                    'show_search_box' => true
+                ]
+            )
+        );
         
         return $fields;
     }
 }
 ```
 
-Remember to set your API key in your site's `config.yml`
+### Configuration Options
 
-```yml
+The field accepts various configuration options:
+
+```php
+GoogleMapField::create($this, 'Location', [
+    'api_key' => 'your-google-maps-api-key',
+    'show_search_box' => true,
+    'field_names' => [
+        'Latitude' => 'Latitude',
+        'Longitude' => 'Longitude', 
+        'Zoom' => 'Zoom',
+        'Bounds' => 'Bounds'
+    ],
+    'map' => [
+        'zoom' => 14
+    ],
+    'default_field_values' => [
+        'Latitude' => 30,
+        'Longitude' => 0
+    ]
+]);
+```
+
+### Custom Field Names
+
+You can customize the database field names:
+
+```php
+GoogleMapField::create($this, 'Location', [
+    'field_names' => [
+        'Latitude' => 'MyLatitudeField',
+        'Longitude' => 'MyLongitudeField',
+        'Zoom' => 'MyZoomField',
+        'Bounds' => 'MyBoundsField'
+    ]
+]);
+```
+
+## Silverstripe 4 vs 5 Compatibility
+
+This module is designed to work with both Silverstripe 4 and 5:
+
+- **PHP Requirements**: PHP 7.4+ (required for Silverstripe 5)
+- **Framework Support**: Silverstripe Framework 4.0+ and 5.0+
+- **CMS Integration**: Supports both SS4 and SS5 CMS interfaces
+- **JavaScript**: Compatible with both versions' event systems
+
+## Configuration
+
+### Global Configuration
+
+You can set default options globally in your configuration:
+
+```yaml
+# app/_config/googlemapfield.yml
 BetterBrief\GoogleMapField:
   default_options:
-    api_key: '[google-api-key]'
+    api_key: 'your-google-maps-api-key'
+    show_search_box: true
+    field_names:
+      Latitude: 'Latitude'
+      Longitude: 'Longitude'
+      Zoom: 'Zoom'
+      Bounds: 'Bounds'
+    map:
+      zoom: 14
+    default_field_values:
+      Latitude: 30
+      Longitude: 0
 ```
 
-## Optional configuration
+### Extending the Field
 
-### Configuration options
-
-You can either set the default options in your yaml file (see [_config/googlemapfield.yml](_config/googlemapfield.yml)
-for a complete list) or at run time on each instance of the `GoogleMapField` object.
-
-#### Setting at run time
-
-To set options at run time pass through an array of options (3rd construct parameter):
+You can extend the field to add custom functionality:
 
 ```php
-use BetterBrief\GoogleMapField;
-
-$field = new GoogleMapField(
-    $dataObject,
-    'FieldName',
-    [
-        'api_key' => 'my-api-key',
-        'show_search_box' => false,
-        'map' => [
-            'zoom' => 10,
-        ],
-        ...
-    ]
-);
+class MyGoogleMapField extends GoogleMapField
+{
+    public function updateGoogleMapsParams(&$params)
+    {
+        // Add custom parameters to Google Maps API call
+        $params['libraries'] = 'places';
+    }
+}
 ```
 
-#### Customising the map appearance
+## License
 
-You can customise the map's appearance by passing through settings into the `map` key of the `$options` (shown above).
-The `map` settings take a literal representation of the [google.maps.MapOptions](https://developers.google.com/maps/documentation/javascript/reference?csw=1#MapOptions)
+BSD License
 
-For example if we wanted to change the map type from a road map to satellite imagery we could do the following:
+## Contributing
 
-```php
-use BetterBrief\GoogleMapField;
+Contributions are welcome! Please ensure your code is compatible with both Silverstripe 4 and 5.
 
-$field = new GoogleMapField(
-    $object,
-    'Location',
-    [
-        'map' => [
-            'mapTypeId' => 'SATELLITE',
-        ],
-    ]
-);
-```
+## Changelog
 
-# Getting an API key
-
-## Google Maps API key
-
-To get a Google Maps JS API key please see [the official docs](https://developers.google.com/maps/documentation/javascript/get-api-key)
-
-## Geocoding access - enabling the search box
-
-To use the search box to find locations on the map, you'll need to have enabled the Geocoding API as well. Please see
-[the official docs](https://developers.google.com/maps/documentation/javascript/geocoding#GetStarted)
+### 3.0.0
+- Added Silverstripe 5 compatibility
+- Updated PHP requirement to 7.4+
+- Enhanced JavaScript for modern CMS integration
+- Improved form change detection for both SS4 and SS5
